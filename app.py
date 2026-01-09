@@ -349,10 +349,18 @@ def create_timeline_chart(df, selected_teams=None, selected_status=None):
             'xanchor': 'center',
             'font': {'size': 24, 'color': '#000000'}  # 黑色標題
         },
-        xaxis=dict(title='時間軸', showgrid=True, gridcolor='#E8E8E8', type='date', 
-                  titlefont=dict(color='#000000')),
-        yaxis=dict(title='行動項目', showticklabels=False, showgrid=True, gridcolor='#E8E8E8',
-                  titlefont=dict(color='#000000')),
+        xaxis=dict(
+            title=dict(text='時間軸', font=dict(color='#000000')),
+            showgrid=True, 
+            gridcolor='#E8E8E8', 
+            type='date'
+        ),
+        yaxis=dict(
+            title=dict(text='行動項目', font=dict(color='#000000')),
+            showticklabels=False, 
+            showgrid=True, 
+            gridcolor='#E8E8E8'
+        ),
         hovermode='closest',
         plot_bgcolor='#FAFAFA',
         paper_bgcolor='white',
@@ -380,10 +388,12 @@ def main():
     # 在頁面頂部顯示 logo 和標題
     col1, col2 = st.columns([1, 4])
     with col1:
-        try:
-            st.image("./logo/logo.png", width=150)
-        except:
-            st.image("./logo/logo_png ig頭像版.png", width=150)
+        logo_path = Path("./logo/logo.png")
+        if logo_path.exists():
+            st.image(str(logo_path), width=150)
+        else:
+            # 如果找不到 logo，顯示佔位符
+            st.markdown("""<div style='width:150px;height:150px;background:linear-gradient(135deg, #3498DB 0%, #2980B9 100%);border-radius:10px;display:flex;align-items:center;justify-content:center;'><span style='color:white;font-size:24px;font-weight:bold;'>TWYA</span></div>""", unsafe_allow_html=True)
     with col2:
         st.title("臺灣華德福青年運動聯盟行動時間線")
         st.markdown("### Taiwan Waldorf Youth Alliance Timeline")
@@ -395,7 +405,7 @@ def main():
         st.header("⚙️ 設定")
         
         # 重新整理按鈕
-        if st.button("🔄 重新載入資料", use_container_width=True):
+        if st.button("🔄 重新載入資料", width="stretch"):
             st.cache_data.clear()
             st.rerun()
         
@@ -483,7 +493,7 @@ def main():
         st.warning("⚠️ 沒有符合篩選條件的資料")
         return
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
     
     # 顯示資料表
     with st.expander("📋 查看原始資料"):
@@ -495,7 +505,7 @@ def main():
         
         st.dataframe(
             display_df[['Team', 'EventName', 'Level', 'Status', 'StartDate', 'EndDate', 'Notes']],
-            use_container_width=True
+            width="stretch"
         )
 
 
