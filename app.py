@@ -14,18 +14,118 @@ import gspread
 from gspread_dataframe import get_as_dataframe
 from oauth2client.service_account import ServiceAccountCredentials
 import json
+import base64
+from pathlib import Path
 
 
 # =============================================================================
 # 頁面配置
 # =============================================================================
 
-st.set_page_config(
-    page_title="TWYA 行動時間線",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# =============================================================================
+# 頁面配置
+# =============================================================================
+
+# 設置 favicon 和自定義樣式
+def setup_page_config():
+    """設置頁面配置、favicon 和自定義樣式"""
+    st.set_page_config(
+        page_title="TWYA 行動時間線",
+        page_icon="./logo/logo.png",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+    
+    # 嘗試讀取 logo 並轉為 base64 作為 favicon
+    try:
+        logo_path = Path("./logo/logo.png")
+        if logo_path.exists():
+            with open(logo_path, "rb") as f:
+                logo_data = base64.b64encode(f.read()).decode()
+            
+            # 注入自定義 HTML 頭部來設置 favicon
+            favicon_html = f"""
+            <head>
+                <link rel="icon" type="image/png" href="data:image/png;base64,{logo_data}">
+                <link rel="shortcut icon" type="image/png" href="data:image/png;base64,{logo_data}">
+            </head>
+            """
+            st.markdown(favicon_html, unsafe_allow_html=True)
+    except Exception as e:
+        pass  # 如果無法讀取 logo，使用默認 favicon
+    
+    # 自定義 CSS 樣式（使用聯盟 logo 配色）
+    custom_css = """
+    <style>
+        /* 主要配色：黑色 #000000、黃色 #F4D03F、藍色 #3498DB */
+        
+        /* 側邊欄樣式 */
+        [data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #3498DB 0%, #2980B9 100%);
+        }
+        
+        [data-testid="stSidebar"] h1, 
+        [data-testid="stSidebar"] h2, 
+        [data-testid="stSidebar"] h3,
+        [data-testid="stSidebar"] p,
+        [data-testid="stSidebar"] label {
+            color: white !important;
+        }
+        
+        /* 按鈕樣式 */
+        .stButton > button {
+            background-color: #F4D03F;
+            color: #000000;
+            border: 2px solid #000000;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .stButton > button:hover {
+            background-color: #F39C12;
+            border-color: #000000;
+            transform: scale(1.05);
+        }
+        
+        /* 標題樣式 */
+        h1, h2, h3 {
+            color: #000000 !important;
+        }
+        
+        /* Metric 卡片樣式 */
+        [data-testid="stMetricValue"] {
+            color: #3498DB !important;
+            font-weight: bold;
+        }
+        
+        [data-testid="stMetricLabel"] {
+            color: #000000 !important;
+        }
+        
+        /* 分隔線樣式 */
+        hr {
+            border-color: #F4D03F;
+            border-width: 2px;
+        }
+        
+        /* 多選框樣式 */
+        .stMultiSelect [data-baseweb="tag"] {
+            background-color: #3498DB;
+            color: white;
+        }
+        
+        /* 擴展區塊樣式 */
+        .streamlit-expanderHeader {
+            background-color: #F4D03F;
+            color: #000000;
+            font-weight: bold;
+            border: 1px solid #3498DB;
+        }
+    </style>
+    """
+    st.markdown(custom_css, unsafe_allow_html=True)
+
+setup_page_config()
 
 
 # =============================================================================
@@ -132,21 +232,23 @@ def clean_and_validate_data(df):
 # =============================================================================
 
 def get_team_color_mapping(teams):
-    """為不同團隊分配顏色"""
+    """為不同團隊分配顏色（使用聯盟 logo 色系）"""
+    # 主色系：黑色 #000000、黃色 #F4D03F、藍色 #3498DB
     default_colors = {
-        '行政組': '#FF6B6B',
-        '活動組': '#4ECDC4',
-        '公關組': '#FFE66D',
-        '財務組': '#95E1D3',
-        '教育組': '#A8E6CF',
-        '資訊組': '#667BC6',
-        '企劃組': '#FDA7DF',
-        '研發組': '#C6A5FC',
+        '行政組': '#000000',  # 黑色
+        '活動組': '#F4D03F',  # 黃色
+        '公關組': '#3498DB',  # 藍色
+        '財務組': '#F39C12',  # 深黃色
+        '教育組': '#2980B9',  # 深藍色
+        '資訊組': '#34495E',  # 深灰色
+        '企劃組': '#F1C40F',  # 金黃色
+        '研發組': '#5DADE2',  # 天藍色
     }
     
+    # 使用 logo 色系的擴展配色
     plotly_colors = [
-        '#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A',
-        '#19D3F3', '#FF6692', '#B6E880', '#FF97FF', '#FECB52'
+        '#000000', '#F4D03F', '#3498DB', '#F39C12', '#2980B9',
+        '#34495E', '#F1C40F', '#5DADE2', '#1F618D', '#F8C471'
     ]
     
     color_mapping = {}
@@ -239,29 +341,31 @@ def create_timeline_chart(df, selected_teams=None, selected_status=None):
             ))
             added_teams.add(team)
     
-    # 設定圖表佈局
+    # 設定圖表佈局（使用聯盟 logo 配色）
     fig.update_layout(
         title={
             'text': '臺灣華德福青年運動聯盟行動時間線<br><sub>Taiwan Waldorf Youth Alliance Timeline</sub>',
             'x': 0.5,
             'xanchor': 'center',
-            'font': {'size': 24, 'color': '#2C3E50'}
+            'font': {'size': 24, 'color': '#000000'}  # 黑色標題
         },
-        xaxis=dict(title='時間軸', showgrid=True, gridcolor='#E8E8E8', type='date'),
-        yaxis=dict(title='行動項目', showticklabels=False, showgrid=True, gridcolor='#E8E8E8'),
+        xaxis=dict(title='時間軸', showgrid=True, gridcolor='#E8E8E8', type='date', 
+                  titlefont=dict(color='#000000')),
+        yaxis=dict(title='行動項目', showticklabels=False, showgrid=True, gridcolor='#E8E8E8',
+                  titlefont=dict(color='#000000')),
         hovermode='closest',
         plot_bgcolor='#FAFAFA',
         paper_bgcolor='white',
         height=max(600, len(df_filtered) * 40),
         margin=dict(l=100, r=300, t=100, b=80),
         legend=dict(
-            title=dict(text='團隊分組', font=dict(size=14, color='#2C3E50')),
+            title=dict(text='團隊分組', font=dict(size=14, color='#000000')),  # 黑色圖例標題
             orientation='v',
             yanchor='top', y=1,
             xanchor='left', x=1.02,
-            bgcolor='rgba(255,255,255,0.8)',
-            bordercolor='#CCCCCC',
-            borderwidth=1
+            bgcolor='rgba(255,255,255,0.9)',
+            bordercolor='#3498DB',  # 藍色邊框
+            borderwidth=2
         )
     )
     
@@ -273,9 +377,18 @@ def create_timeline_chart(df, selected_teams=None, selected_status=None):
 # =============================================================================
 
 def main():
-    # 標題
-    st.title("📊 臺灣華德福青年運動聯盟行動時間線")
-    st.markdown("### Taiwan Waldorf Youth Alliance Timeline")
+    # 在頁面頂部顯示 logo 和標題
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        try:
+            st.image("./logo/logo.png", width=150)
+        except:
+            st.image("./logo/logo_png ig頭像版.png", width=150)
+    with col2:
+        st.title("臺灣華德福青年運動聯盟行動時間線")
+        st.markdown("### Taiwan Waldorf Youth Alliance Timeline")
+    
+    st.markdown("---")
     
     # 側邊欄
     with st.sidebar:
