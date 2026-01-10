@@ -54,14 +54,25 @@ def setup_page_config():
     except Exception as e:
         pass  # 如果無法讀取 logo，使用默認 favicon
     
-    # 自定義 CSS 樣式（使用聯盟 logo 配色）
+    # 自定義 CSS 樣式(使用聯盟 logo 配色)
     custom_css = """
     <style>
-        /* 主要配色：品牌藍 #175BA6、品牌黃 #E9E13B */
+        /* 主要配色:品牌藍 #175BA6、品牌黃 #E9E13B */
+        /* 強制使用淺色主題,覆蓋所有暗色設定 */
+        
+        /* 強制設定整體背景為白色 */
+        .stApp {
+            background-color: #FFFFFF !important;
+        }
+        
+        /* 強制主內容區背景為白色 */
+        .main .block-container {
+            background-color: #FFFFFF !important;
+        }
         
         /* 側邊欄樣式 */
         [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #175BA6 0%, #124785 100%);
+            background: linear-gradient(180deg, #175BA6 0%, #124785 100%) !important;
             box-shadow: 2px 0 10px rgba(23, 91, 166, 0.2);
         }
         
@@ -149,14 +160,14 @@ def setup_page_config():
             background-color: rgba(233, 225, 59, 0.25);
         }
         
-        /* 主內容區背景 */
+        /* 主內容區背景 - 強制白色 */
         .main {
-            background-color: #FAFAFA;
+            background-color: #FFFFFF !important;
         }
         
-        /* 卡片樣式優化 */
+        /* 卡片樣式優化 - 強制白色背景 */
         [data-testid="stMetric"] {
-            background-color: white;
+            background-color: #FFFFFF !important;
             padding: 1rem;
             border-radius: 8px;
             border-left: 4px solid #175BA6;
