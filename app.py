@@ -57,11 +57,12 @@ def setup_page_config():
     # 自定義 CSS 樣式（使用聯盟 logo 配色）
     custom_css = """
     <style>
-        /* 主要配色：黑色 #000000、黃色 #F4D03F、藍色 #3498DB */
+        /* 主要配色：品牌藍 #175BA6、品牌黃 #E9E13B */
         
         /* 側邊欄樣式 */
         [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #3498DB 0%, #2980B9 100%);
+            background: linear-gradient(180deg, #175BA6 0%, #124785 100%);
+            box-shadow: 2px 0 10px rgba(23, 91, 166, 0.2);
         }
         
         [data-testid="stSidebar"] h1, 
@@ -72,54 +73,99 @@ def setup_page_config():
             color: white !important;
         }
         
+        /* 側邊欄分隔線 */
+        [data-testid="stSidebar"] hr {
+            border-color: rgba(233, 225, 59, 0.4);
+            border-width: 1px;
+        }
+        
         /* 按鈕樣式 */
         .stButton > button {
-            background-color: #F4D03F;
-            color: #000000;
-            border: 2px solid #000000;
+            background-color: #E9E13B;
+            color: #2C2C2C;
+            border: none;
             font-weight: bold;
             transition: all 0.3s ease;
+            border-radius: 8px;
+            padding: 0.5rem 2rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
         .stButton > button:hover {
-            background-color: #F39C12;
-            border-color: #000000;
-            transform: scale(1.05);
+            background-color: #D4CA35;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
         }
         
         /* 標題樣式 */
-        h1, h2, h3 {
-            color: #000000 !important;
+        h1 {
+            color: #175BA6 !important;
+            font-weight: 700;
+        }
+        
+        h2, h3 {
+            color: #2C2C2C !important;
         }
         
         /* Metric 卡片樣式 */
         [data-testid="stMetricValue"] {
-            color: #3498DB !important;
+            color: #175BA6 !important;
             font-weight: bold;
+            font-size: 2rem;
         }
         
         [data-testid="stMetricLabel"] {
-            color: #000000 !important;
+            color: #5A5A5A !important;
+            font-weight: 500;
         }
         
         /* 分隔線樣式 */
         hr {
-            border-color: #F4D03F;
+            border-color: rgba(233, 225, 59, 0.3);
             border-width: 2px;
+            margin: 1.5rem 0;
         }
         
         /* 多選框樣式 */
         .stMultiSelect [data-baseweb="tag"] {
-            background-color: #3498DB;
+            background-color: #175BA6;
+            color: white;
+        }
+        
+        .stMultiSelect [data-baseweb="tag"] span[role="button"] {
             color: white;
         }
         
         /* 擴展區塊樣式 */
         .streamlit-expanderHeader {
-            background-color: #F4D03F;
-            color: #000000;
+            background-color: rgba(233, 225, 59, 0.15);
+            color: #2C2C2C;
             font-weight: bold;
-            border: 1px solid #3498DB;
+            border-left: 4px solid #175BA6;
+            border-radius: 4px;
+        }
+        
+        .streamlit-expanderHeader:hover {
+            background-color: rgba(233, 225, 59, 0.25);
+        }
+        
+        /* 主內容區背景 */
+        .main {
+            background-color: #FAFAFA;
+        }
+        
+        /* 卡片樣式優化 */
+        [data-testid="stMetric"] {
+            background-color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #175BA6;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* Spinner 樣式 */
+        .stSpinner > div {
+            border-top-color: #E9E13B !important;
         }
     </style>
     """
@@ -233,22 +279,30 @@ def clean_and_validate_data(df):
 
 def get_team_color_mapping(teams):
     """為不同團隊分配顏色（使用聯盟 logo 色系）"""
-    # 主色系：黑色 #000000、黃色 #F4D03F、藍色 #3498DB
+    # 主色系：品牌藍 #175BA6、品牌黃 #E9E13B
     default_colors = {
-        '行政組': '#000000',  # 黑色
-        '活動組': '#F4D03F',  # 黃色
-        '公關組': '#3498DB',  # 藍色
-        '財務組': '#F39C12',  # 深黃色
-        '教育組': '#2980B9',  # 深藍色
-        '資訊組': '#34495E',  # 深灰色
-        '企劃組': '#F1C40F',  # 金黃色
-        '研發組': '#5DADE2',  # 天藍色
+        '行政組': '#175BA6',  # 品牌藍
+        '活動組': '#E9E13B',  # 品牌黃
+        '公關組': '#2A7FC1',  # 亮藍
+        '財務組': '#D4CA35',  # 橄欖金
+        '教育組': '#124785',  # 深藍
+        '資訊組': '#3D93D2',  # 天藍
+        '企劃組': '#F4E96D',  # 淺黃
+        '研發組': '#0E3A5F',  # 墨藍
     }
     
-    # 使用 logo 色系的擴展配色
+    # 使用 logo 色系的擴展配色（藍色和黃色系列）
     plotly_colors = [
-        '#000000', '#F4D03F', '#3498DB', '#F39C12', '#2980B9',
-        '#34495E', '#F1C40F', '#5DADE2', '#1F618D', '#F8C471'
+        '#175BA6',  # 品牌藍
+        '#E9E13B',  # 品牌黃
+        '#2A7FC1',  # 亮藍
+        '#D4CA35',  # 橄欖金
+        '#124785',  # 深藍
+        '#F4E96D',  # 淺黃
+        '#3D93D2',  # 天藍
+        '#C5BC33',  # 深金
+        '#0E3A5F',  # 墨藍
+        '#FFF8B3',  # 奶油黃
     ]
     
     color_mapping = {}
@@ -347,33 +401,36 @@ def create_timeline_chart(df, selected_teams=None, selected_status=None):
             'text': '臺灣華德福青年運動聯盟行動時間線<br><sub>Taiwan Waldorf Youth Alliance Timeline</sub>',
             'x': 0.5,
             'xanchor': 'center',
-            'font': {'size': 24, 'color': '#000000'}  # 黑色標題
+            'font': {'size': 24, 'color': '#175BA6', 'family': 'Arial, sans-serif'}  # 品牌藍標題
         },
         xaxis=dict(
-            title=dict(text='時間軸', font=dict(color='#000000')),
+            title=dict(text='時間軸', font=dict(color='#2C2C2C', size=14)),
             showgrid=True, 
-            gridcolor='#E8E8E8', 
-            type='date'
+            gridcolor='rgba(23, 91, 166, 0.1)',  # 淡藍色網格
+            type='date',
+            zeroline=False
         ),
         yaxis=dict(
-            title=dict(text='行動項目', font=dict(color='#000000')),
+            title=dict(text='行動項目', font=dict(color='#2C2C2C', size=14)),
             showticklabels=False, 
             showgrid=True, 
-            gridcolor='#E8E8E8'
+            gridcolor='rgba(233, 225, 59, 0.1)',  # 淡黃色網格
+            zeroline=False
         ),
         hovermode='closest',
-        plot_bgcolor='#FAFAFA',
+        plot_bgcolor='#FDFDF8',  # 極淺的暖白色背景
         paper_bgcolor='white',
         height=max(600, len(df_filtered) * 40),
         margin=dict(l=100, r=300, t=100, b=80),
         legend=dict(
-            title=dict(text='團隊分組', font=dict(size=14, color='#000000')),  # 黑色圖例標題
+            title=dict(text='團隊分組', font=dict(size=14, color='#175BA6', weight='bold')),  # 品牌藍圖例標題
             orientation='v',
             yanchor='top', y=1,
             xanchor='left', x=1.02,
-            bgcolor='rgba(255,255,255,0.9)',
-            bordercolor='#3498DB',  # 藍色邊框
-            borderwidth=2
+            bgcolor='rgba(255,255,255,0.95)',
+            bordercolor='#175BA6',  # 品牌藍邊框
+            borderwidth=2,
+            font=dict(color='#2C2C2C')
         )
     )
     
@@ -393,7 +450,7 @@ def main():
             st.image(str(logo_path), width=150)
         else:
             # 如果找不到 logo，顯示佔位符
-            st.markdown("""<div style='width:150px;height:150px;background:linear-gradient(135deg, #3498DB 0%, #2980B9 100%);border-radius:10px;display:flex;align-items:center;justify-content:center;'><span style='color:white;font-size:24px;font-weight:bold;'>TWYA</span></div>""", unsafe_allow_html=True)
+            st.markdown("""<div style='width:150px;height:150px;background:linear-gradient(135deg, #175BA6 0%, #124785 100%);border-radius:10px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 8px rgba(23,91,166,0.3);'><span style='color:#E9E13B;font-size:28px;font-weight:bold;text-shadow:1px 1px 2px rgba(0,0,0,0.3);'>TWYA</span></div>""", unsafe_allow_html=True)
     with col2:
         st.title("臺灣華德福青年運動聯盟行動時間線")
         st.markdown("### Taiwan Waldorf Youth Alliance Timeline")
