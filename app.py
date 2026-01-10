@@ -33,7 +33,7 @@ def setup_page_config():
         page_title="TWYA 行動時間線",
         page_icon="./logo/logo.png",
         layout="wide",
-        initial_sidebar_state="expanded"
+        initial_sidebar_state="collapsed"  # 默認收起側邊欄，給時間線更多空間
     )
     
     # 嘗試讀取 logo 並轉為 base64 作為 favicon
@@ -178,6 +178,33 @@ def setup_page_config():
         .stSpinner > div {
             border-top-color: #E9E13B !important;
         }
+        
+        /* 響應式佈局優化 - 避免元素重疊 */
+        .main .block-container {
+            padding-top: 1rem;
+            padding-bottom: 2rem;
+            max-width: 100%;
+        }
+        
+        /* 確保圖表容器自適應 */
+        .js-plotly-plot, .plotly {
+            width: 100% !important;
+        }
+        
+        /* 多選框容器優化 */
+        .stMultiSelect {
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Metric 標籤字體大小調整 */
+        [data-testid="stMetricLabel"] {
+            font-size: 0.9rem !important;
+            white-space: nowrap;
+        }
+        
+        [data-testid="stMetricValue"] {
+            font-size: 1.5rem !important;
+        }
     </style>
     """
     st.markdown(custom_css, unsafe_allow_html=True)
@@ -289,31 +316,32 @@ def clean_and_validate_data(df):
 # =============================================================================
 
 def get_team_color_mapping(teams):
-    """為不同團隊分配顏色（使用聯盟 logo 色系）"""
-    # 主色系：品牌藍 #175BA6、品牌黃 #E9E13B
+    """為不同團隊分配顏色（使用高對比度色系）"""
+    # 使用高對比度、易於區分的顏色
     default_colors = {
-        '行政組': '#175BA6',  # 品牌藍
-        '活動組': '#E9E13B',  # 品牌黃
-        '公關組': '#2A7FC1',  # 亮藍
-        '財務組': '#D4CA35',  # 橄欖金
-        '教育組': '#124785',  # 深藍
-        '資訊組': '#3D93D2',  # 天藍
-        '企劃組': '#F4E96D',  # 淺黃
-        '研發組': '#0E3A5F',  # 墨藍
+        '行政組': '#1E88E5',  # 明亮藍
+        '活動組': '#43A047',  # 綠色
+        '公關組': '#E53935',  # 紅色
+        '財務組': '#FB8C00',  # 橙色
+        '教育組': '#8E24AA',  # 紫色
+        '資訊組': '#00ACC1',  # 青色
+        '企劃組': '#F9A825',  # 金黃
+        '研發組': '#5E35B1',  # 深紫
+        '理事長': '#C62828',  # 深紅
     }
     
-    # 使用 logo 色系的擴展配色（藍色和黃色系列）
+    # 使用高對比度的顏色配色
     plotly_colors = [
-        '#175BA6',  # 品牌藍
-        '#E9E13B',  # 品牌黃
-        '#2A7FC1',  # 亮藍
-        '#D4CA35',  # 橄欖金
-        '#124785',  # 深藍
-        '#F4E96D',  # 淺黃
-        '#3D93D2',  # 天藍
-        '#C5BC33',  # 深金
-        '#0E3A5F',  # 墨藍
-        '#FFF8B3',  # 奶油黃
+        '#1E88E5',  # 明亮藍
+        '#43A047',  # 綠色
+        '#E53935',  # 紅色
+        '#FB8C00',  # 橙色
+        '#8E24AA',  # 紫色
+        '#00ACC1',  # 青色
+        '#F9A825',  # 金黃
+        '#5E35B1',  # 深紫
+        '#00897B',  # 藍綠
+        '#D81B60',  # 粉紅
     ]
     
     color_mapping = {}
@@ -379,16 +407,20 @@ def create_timeline_chart(df, selected_teams=None, selected_status=None):
         status_marker = get_status_marker(row['Status'])
         display_text = f"{status_marker} {row['EventName']}" if status_marker else row['EventName']
         
+        # 計算文字顏色（深色背景用白字）
+        team_color = color_mapping[row['Team']]
+        
         fig.add_trace(go.Scatter(
             x=[row['StartDate'], row['EndDate']],
             y=[idx, idx],
             mode='lines+markers+text',
             name=row['Team'],
-            line=dict(color=color_mapping[row['Team']], width=8),
-            marker=dict(size=10, symbol='circle', color=color_mapping[row['Team']]),
+            line=dict(color=team_color, width=18),  # 加粗時間條
+            marker=dict(size=14, symbol='circle', color=team_color, 
+                       line=dict(color='white', width=2)),  # 白色邊框
             text=[display_text, ''],
             textposition='middle right',
-            textfont=dict(size=10),
+            textfont=dict(size=12, color='#2C2C2C', family='Arial Black'),  # 加粗文字
             hovertemplate=hover_text + '<extra></extra>',
             showlegend=False
         ))
@@ -406,42 +438,120 @@ def create_timeline_chart(df, selected_teams=None, selected_status=None):
             ))
             added_teams.add(team)
     
-    # 設定圖表佈局（使用聯盟 logo 配色）
+    # 添加今天的日期標記線
+    from datetime import datetime
+    today = datetime.now()
+    fig.add_shape(
+        type="line",
+        x0=today, x1=today,
+        y0=-0.5, y1=len(df_filtered) - 0.5,
+        line=dict(
+            color="#FF6B6B",  # 醒目的紅色
+            width=3,
+            dash="dash"  # 虛線
+        ),
+        layer="below"  # 放在事件條下方
+    )
+    
+    # 添加今天的標籤
+    fig.add_annotation(
+        x=today,
+        y=len(df_filtered),
+        text=f"📅 今天 ({today.strftime('%Y-%m-%d')})",
+        showarrow=False,
+        yshift=10,
+        font=dict(size=12, color="#FF6B6B", weight="bold"),
+        bgcolor="rgba(255, 255, 255, 0.9)",
+        bordercolor="#FF6B6B",
+        borderwidth=2,
+        borderpad=4
+    )
+    
+    # 計算動態高度：項目少時也要有足夠空間
+    num_items = len(df_filtered)
+    chart_height = max(400, min(800, num_items * 50))  # 最小400, 最大800
+    
+    # 計算初始顯示範圍：左側為當天前一個月，右側為最遠的活動日期
+    from datetime import datetime, timedelta
+    today = datetime.now()
+    one_month_ago = today - timedelta(days=30)
+    max_end_date = df_filtered['EndDate'].max()
+    
+    # 設定圖表佈局（橫向長方形，啟用滾輪縮放）
     fig.update_layout(
         title={
             'text': '臺灣華德福青年運動聯盟行動時間線<br><sub>Taiwan Waldorf Youth Alliance Timeline</sub>',
             'x': 0.5,
             'xanchor': 'center',
-            'font': {'size': 24, 'color': '#175BA6', 'family': 'Arial, sans-serif'}  # 品牌藍標題
+            'font': {'size': 22, 'color': '#1565C0', 'family': 'Arial, sans-serif', 'weight': 'bold'}
         },
         xaxis=dict(
-            title=dict(text='時間軸', font=dict(color='#2C2C2C', size=14)),
+            title=dict(text='時間軸', font=dict(color='#37474F', size=14, weight='bold')),
             showgrid=True, 
-            gridcolor='rgba(23, 91, 166, 0.1)',  # 淡藍色網格
+            gridcolor='rgba(0, 0, 0, 0.08)',
+            gridwidth=1,
             type='date',
-            zeroline=False
+            zeroline=False,
+            tickfont=dict(size=12, color='#37474F'),
+            tickformat='%Y-%m-%d',
+            tickmode='auto',  # 自動調整刻度，根據縮放程度顯示適當的時間間隔
+            nticks=15,  # 建議刻度數量，但會根據實際範圍調整
+            # 設定初始顯示範圍
+            range=[one_month_ago, max_end_date],  # 左側：今天前一個月，右側：最遠的活動日期
+            # 啟用縮放和平移
+            rangeslider=dict(visible=False),
+            fixedrange=False,  # 允許縮放
+            # 啟用游標處顯示日期的垂直線
+            showspikes=True,
+            spikemode='across',
+            spikesnap='cursor',
+            spikethickness=2,
+            spikecolor='#1565C0',
+            spikedash='dot'
         ),
         yaxis=dict(
-            title=dict(text='行動項目', font=dict(color='#2C2C2C', size=14)),
+            title=dict(text='行動項目', font=dict(color='#37474F', size=14, weight='bold')),
             showticklabels=False, 
             showgrid=True, 
-            gridcolor='rgba(233, 225, 59, 0.1)',  # 淡黃色網格
-            zeroline=False
+            gridcolor='rgba(0, 0, 0, 0.05)',
+            zeroline=False,
+            fixedrange=True,  # Y軸固定，只允許X軸縮放
+            showspikes=False  # Y軸不顯示spike line
         ),
-        hovermode='closest',
-        plot_bgcolor='#FDFDF8',  # 極淺的暖白色背景
+        hovermode='x unified',  # 改用 x unified 模式，顯示游標處所有項目
+        plot_bgcolor='#FAFAFA',  # 淺灰背景
         paper_bgcolor='white',
-        height=max(600, len(df_filtered) * 40),
-        margin=dict(l=100, r=300, t=100, b=80),
+        height=chart_height,
+        margin=dict(l=30, r=150, t=100, b=50),  # 進一步減少左側邊距，增加圖表橫向空間
         legend=dict(
-            title=dict(text='團隊分組', font=dict(size=14, color='#175BA6', weight='bold')),  # 品牌藍圖例標題
+            title=dict(text='團隊分組', font=dict(size=13, color='#1565C0', weight='bold')),
             orientation='v',
             yanchor='top', y=1,
-            xanchor='left', x=1.02,
+            xanchor='left', x=1.005,  # 圖例更靠近圖表
             bgcolor='rgba(255,255,255,0.95)',
-            bordercolor='#175BA6',  # 品牌藍邊框
-            borderwidth=2,
-            font=dict(color='#2C2C2C')
+            bordercolor='#1565C0',
+            borderwidth=1,
+            font=dict(color='#37474F', size=10)  # 縮小圖例字體
+        ),
+        # 設定拖拉模式為平移，滾輪用於縮放
+        dragmode='pan',  # 鼠標拖拉時平移視圖，滾輪用於縮放
+    )
+    
+    # 配置互動選項，啟用滾輪縮放
+    fig.update_xaxes(
+        rangeselector=dict(
+            buttons=list([
+                dict(count=1, label="1個月", step="month", stepmode="backward"),
+                dict(count=3, label="3個月", step="month", stepmode="backward"),
+                dict(count=6, label="6個月", step="month", stepmode="backward"),
+                dict(count=1, label="1年", step="year", stepmode="backward"),
+                dict(step="all", label="全部")
+            ]),
+            bgcolor='#E3F2FD',
+            activecolor='#1565C0',
+            font=dict(color='#37474F', size=11),
+            x=0,
+            y=1.12
         )
     )
     
@@ -453,49 +563,39 @@ def create_timeline_chart(df, selected_teams=None, selected_status=None):
 # =============================================================================
 
 def main():
-    # 在頁面頂部顯示 logo 和標題
-    col1, col2 = st.columns([1, 4])
-    with col1:
+    # 優化頂部佈局，將控制項移到頂部
+    header_col1, header_col2, header_col3 = st.columns([1, 8, 2])
+    with header_col1:
         logo_path = Path("./logo/logo.png")
         if logo_path.exists():
-            st.image(str(logo_path), width=150)
+            st.image(str(logo_path), width=70)
         else:
-            # 如果找不到 logo，顯示佔位符
-            st.markdown("""<div style='width:150px;height:150px;background:linear-gradient(135deg, #175BA6 0%, #124785 100%);border-radius:10px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 8px rgba(23,91,166,0.3);'><span style='color:#E9E13B;font-size:28px;font-weight:bold;text-shadow:1px 1px 2px rgba(0,0,0,0.3);'>TWYA</span></div>""", unsafe_allow_html=True)
-    with col2:
-        st.title("臺灣華德福青年運動聯盟行動時間線")
-        st.markdown("### Taiwan Waldorf Youth Alliance Timeline")
-    
-    st.markdown("---")
-    
-    # 側邊欄
-    with st.sidebar:
-        st.header("⚙️ 設定")
-        
-        # 重新整理按鈕
-        if st.button("🔄 重新載入資料", width="stretch"):
+            st.markdown("""<div style='width:60px;height:60px;background:linear-gradient(135deg, #1565C0 0%, #0D47A1 100%);border-radius:8px;display:flex;align-items:center;justify-content:center;'><span style='color:white;font-size:16px;font-weight:bold;'>TWYA</span></div>""", unsafe_allow_html=True)
+    with header_col2:
+        st.markdown("<h2 style='margin:0;padding:0;color:#1565C0;'>臺灣華德福青年運動聯盟行動時間線</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='margin:0;padding:0;color:#546E7A;font-size:13px;'>Taiwan Waldorf Youth Alliance Timeline</p>", unsafe_allow_html=True)
+    with header_col3:
+        # 重新載入按鈕移到頂部
+        if st.button("🔄 重新載入", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
-        
-        st.markdown("---")
-        
+    
+    # 側邊欄（簡化內容，默認收起）
+    with st.sidebar:
+        st.markdown("### 📖 使用說明")
         st.markdown("""
-        ### 📖 使用說明
         - 資料每 5 分鐘自動更新
-        - 可使用篩選器查看特定團隊或狀態
+        - 使用篩選器查看特定團隊或狀態
         - 懸停在時間線上查看詳細資訊
         - 使用滑鼠滾輪縮放時間軸
         
-        ### 📊 狀態圖示說明
-        - ✓ Done: 已完成
-        - ⟳ WIP: 進行中
-        - ○ Todo: 待執行
-        - ⊗ Blocked: 受阻
+        **狀態圖示**
+        - ✓ Done: 已完成 | ⟳ WIP: 進行中
+        - ○ Todo: 待執行 | ⊗ Blocked: 受阻
         - ⏸ Pending: 待定
         """)
-        
         st.markdown("---")
-        st.markdown(f"**更新時間**: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+        st.caption(f"更新時間: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     
     # 載入資料
     with st.spinner("正在載入資料..."):
@@ -517,41 +617,50 @@ def main():
         st.warning("⚠️ 清理後沒有有效資料")
         return
     
-    # 顯示統計資訊
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("總項目數", len(df_clean))
-    with col2:
-        st.metric("團隊數量", df_clean['Team'].nunique())
-    with col3:
+    # 統計資訊區（單獨一行）
+    stat_col1, stat_col2, stat_col3, stat_col4, stat_col5 = st.columns(5)
+    with stat_col1:
+        st.metric("📊 總項目", len(df_clean))
+    with stat_col2:
+        st.metric("👥 團隊數", df_clean['Team'].nunique())
+    with stat_col3:
         done_count = len(df_clean[df_clean['Status'] == 'Done'])
-        st.metric("已完成", done_count)
-    with col4:
+        st.metric("✓ 已完成", done_count)
+    with stat_col4:
         wip_count = len(df_clean[df_clean['Status'] == 'WIP'])
-        st.metric("進行中", wip_count)
+        st.metric("⟳ 進行中", wip_count)
+    with stat_col5:
+        todo_count = len(df_clean[df_clean['Status'] == 'Todo'])
+        st.metric("○ 待執行", todo_count)
     
-    st.markdown("---")
+    st.markdown("<div style='margin:8px 0;'></div>", unsafe_allow_html=True)
     
-    # 篩選器
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        all_teams = sorted(df_clean['Team'].unique())
+    # 篩選器區（單獨一行）
+    filter_col1, filter_col2, filter_col3 = st.columns([2, 2, 1])
+    all_teams = sorted(df_clean['Team'].unique())
+    all_status = sorted(df_clean['Status'].unique())
+    with filter_col1:
         selected_teams = st.multiselect(
-            "選擇團隊",
+            "🔍 選擇團隊",
             options=all_teams,
             default=all_teams,
             help="可選擇多個團隊"
         )
-    
-    with col2:
-        all_status = sorted(df_clean['Status'].unique())
+    with filter_col2:
         selected_status = st.multiselect(
-            "選擇狀態",
+            "📌 選擇狀態",
             options=all_status,
             default=all_status,
             help="可選擇多個狀態"
         )
+    with filter_col3:
+        st.markdown("<div style='margin-top:23px;'></div>", unsafe_allow_html=True)
+        show_help = st.checkbox("💡 顯示提示", value=False)
+    
+    if show_help:
+        st.info("💡 **使用技巧**: 使用滑鼠滾輪縮放時間軸 | 點擊並拖動可以平移 | 使用上方按鈕快速選擇時間範圍")
+    
+    st.markdown("<hr style='margin:10px 0;border:none;border-top:1px solid #E0E0E0;'>", unsafe_allow_html=True)
     
     # 生成並顯示圖表
     with st.spinner("正在生成時間線..."):
@@ -561,7 +670,21 @@ def main():
         st.warning("⚠️ 沒有符合篩選條件的資料")
         return
     
-    st.plotly_chart(fig, width="stretch")
+    # 顯示圖表，啟用滾輪縮放功能
+    config = {
+        'scrollZoom': True,  # 啟用滑鼠滾輪縮放
+        'displayModeBar': True,
+        'modeBarButtonsToAdd': ['pan2d', 'zoomIn2d', 'zoomOut2d', 'resetScale2d'],
+        'displaylogo': False,
+        'toImageButtonOptions': {
+            'format': 'png',
+            'filename': 'twya_timeline',
+            'height': 800,
+            'width': 1600,
+            'scale': 2
+        }
+    }
+    st.plotly_chart(fig, use_container_width=True, config=config)
     
     # 顯示資料表
     with st.expander("📋 查看原始資料"):
