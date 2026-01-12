@@ -12,35 +12,16 @@ import plotly.graph_objects as go
 from datetime import datetime
 import gspread
 from gspread_dataframe import get_as_dataframe
-from oauth2client.service_account import ServiceAccountCredentials
 import json
 import base64
 from pathlib import Path
-import ssl
-import certifi
-import httplib2
 import os
-import urllib3
-import warnings
 
-# 禁用SSL警告（僅用於本地開發環境）
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-warnings.filterwarnings('ignore', message='Unverified HTTPS request')
-
-# 設置環境變數以處理SSL問題（僅用於本地開發）
-os.environ['CURL_CA_BUNDLE'] = ''
-os.environ['REQUESTS_CA_BUNDLE'] = ''
-os.environ['PYTHONHTTPSVERIFY'] = '0'
-
-# 修改 ssl 的默認上下文為不驗證
-try:
-    _create_unverified_https_context = ssl._create_unverified_context
-except AttributeError:
-    pass
-else:
-    ssl._create_default_https_context = _create_unverified_https_context
-
-
+# 移除不再需要的 SSL 相關導入
+# import ssl
+# import certifi
+# import httplib2
+# import urllib3
 # =============================================================================
 # 頁面配置
 # =============================================================================
@@ -239,60 +220,70 @@ setup_page_config()
 # 資料載入函數
 # =============================================================================
 
-def load_data_from_google_sheet():
-    """從 Google Sheet 讀取資料，使用禁用SSL驗證的方式（僅用於本地開發）"""
+@st.cache_data(ttl=300)  # 快取資料 5 分鐘
+def load_data():
+    """
+    自動偵測環境並載入資料。
+    - 如果本地測試檔案存在，從本地 CSV 檔案載入。
+    - 否則，從 Google Sheets 載入（Streamlit Cloud 正式環境）。
+    """
+    # 檢查本地測試檔案是否存在
+    local_csv_path = Path("data/TWYA 行動時間線資料_本地測試.csv")
     
-    try:
-        # 從 Streamlit secrets 讀取憑證
-        creds_dict = dict(st.secrets["gcp_service_account"])
-        
-        # 設定 API 範圍
-        scope = [
-            "https://spreadsheets.google.com/feeds",
-            'https://www.googleapis.com/auth/spreadsheets',
-            "https://www.googleapis.com/auth/drive.file",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        
-        # 使用憑證進行授權，但使用標準方式（讓系統處理SSL）
-        # 我們已經在檔案開頭設置了環境變數來處理SSL
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        client = gspread.authorize(creds)
-        
-        # 開啟 Google Sheet 並讀取第一個工作表
-        sheet_name = st.secrets.get("sheet_name", "TWYA 行動時間線資料")
-        sheet = client.open(sheet_name).sheet1
-        
-        # 將工作表轉換為 DataFrame
-        df = get_as_dataframe(sheet)
-        
-        # 移除所有欄位均為 NaN 的列
-        df.dropna(how='all', inplace=True)
-        
-        # 將中文欄位映射到英文欄位
-        column_mapping = {
-            '負責組別': 'Team',
-            '任務名稱': 'EventName',
-            '性質': 'Level',
-            '開始日期': 'StartDate',
-            '開始時間': 'StartTime',
-            '結束日期': 'EndDate',
-            '結束時間': 'EndTime',
-            '狀態': 'Status',
-            '備註': 'Notes'
-        }
-        
-        rename_dict = {k: v for k, v in column_mapping.items() if k in df.columns}
-        df = df.rename(columns=rename_dict)
-        
-        return df, None
-        
-    except Exception as e:
-        error_msg = str(e)
-        # 如果是SSL錯誤，提供更詳細的說明
-        if 'SSL' in error_msg or 'ssl' in error_msg:
-            error_msg = f"SSL連接錯誤：{error_msg}\n\n這是本地開發環境的網路安全設定問題，不是程式碼錯誤。雲端版本不受影響。"
-        return None, error_msg
+    # 優先使用本地 CSV（如果存在）
+    if local_csv_path.exists():
+        # 本地開發環境，從 CSV 載入
+        try:
+            with st.spinner(f"📁 本地開發模式：正在從 {local_csv_path} 載入資料..."):
+                df = pd.read_csv(local_csv_path)
+
+                # 移除所有欄位均為 NaN 的列
+                df.dropna(how='all', inplace=True)
+
+                # 將中文欄位映射到英文欄位 (與 Google Sheet 邏輯保持一致)
+                column_mapping = {
+                    '負責組別': 'Team', '任務名稱': 'EventName', '性質': 'Level',
+                    '開始日期': 'StartDate', '開始時間': 'StartTime', '結束日期': 'EndDate',
+                    '結束時間': 'EndTime', '狀態': 'Status', '備註': 'Notes'
+                }
+                rename_dict = {k: v for k, v in column_mapping.items() if k in df.columns}
+                df = df.rename(columns=rename_dict)
+
+                return df, None, "本地 CSV 檔案"
+        except Exception as e:
+            error_msg = f"從本地 CSV 檔案載入資料時發生錯誤: {e}"
+            return None, error_msg, "本地 CSV 檔案"
+    else:
+        # Streamlit Cloud 環境，從 Google Sheets 載入
+        try:
+            with st.spinner("☁️ 正在從 Google Sheets 載入即時資料..."):
+                # 使用 gspread 的現代化驗證方法
+                creds = st.secrets["gcp_service_account"]
+                gc = gspread.service_account_from_dict(creds)
+                
+                sheet_name = st.secrets.get("sheet_name", "TWYA 行動時間線資料")
+                spreadsheet = gc.open(sheet_name)
+                worksheet = spreadsheet.sheet1
+                
+                df = get_as_dataframe(worksheet)
+                
+                # 移除所有欄位均為 NaN 的列
+                df.dropna(how='all', inplace=True)
+                
+                # 將中文欄位映射到英文欄位
+                column_mapping = {
+                    '負責組別': 'Team', '任務名稱': 'EventName', '性質': 'Level',
+                    '開始日期': 'StartDate', '開始時間': 'StartTime', '結束日期': 'EndDate',
+                    '結束時間': 'EndTime', '狀態': 'Status', '備註': 'Notes'
+                }
+                rename_dict = {k: v for k, v in column_mapping.items() if k in df.columns}
+                df = df.rename(columns=rename_dict)
+                
+                return df, None, "Google Sheets"
+        except Exception as e:
+            error_msg = f"從 Google Sheets 載入資料時發生錯誤: {e}"
+            return None, error_msg, "Google Sheets"
+
 
 
 def clean_and_validate_data(df):
@@ -669,45 +660,30 @@ def main():
         - 使用篩選器查看特定團隊或狀態
         - 懸停在時間線上查看詳細資訊
         - 使用滑鼠滾輪縮放時間軸
-        
-        **狀態圖示**
-        - ✓ Done: 已完成 | ⟳ WIP: 進行中
-        - ○ Todo: 待執行 | ⊗ Blocked: 受阻
-        - ⏸ Pending: 待定
         """)
-        st.markdown("---")
-        st.caption(f"更新時間: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     
-    # 載入資料 - 僅使用 Google Sheets
-    with st.spinner("正在從 Google Sheets 載入資料..."):
-        df, error = load_data_from_google_sheet()
-        
-        if df is not None:
-            st.success("☁️ 已從 Google Sheets 載入資料")
+    df, error, source = load_data()
+    
+    if df is not None:
+        if source == "Google Sheets":
+            st.success("☁️ 已從 Google Sheets 載入即時資料")
         else:
-            st.error(f"❌ 無法從 Google Sheets 載入資料")
-            st.error(f"**錯誤詳情：** {error}")
-    
+            st.success(f"️本地模式：已從 {source} 載入資料")
+    else:
+        st.error(f"❌ 無法載入資料")
+        st.error(f"**來源：** {source}\n\n**錯誤詳情：** {error}")
+
     if error:
-        st.warning("""
-        ### 🔧 SSL連接問題排查
-        
-        此錯誤通常由以下原因造成：
-        
-        1. **防毒軟體干擾** - 某些防毒軟體會攔截SSL連接
-           - 請暫時停用防毒軟體的「SSL掃描」功能
-        
-        2. **企業/學校網路限制** - 可能有代理伺服器或防火牆限制
-           - 請嘗試使用手機熱點連接
-        
-        3. **Windows系統時間不正確** - SSL憑證驗證需要正確的系統時間
-           - 請檢查系統日期時間是否正確
-        
-        4. **Python SSL模組問題**
-           - 請在終端機執行：`pip install --upgrade certifi urllib3`
-        
-        **注意：** 雲端版本（Streamlit Cloud）不受此問題影響，此問題僅發生在本地開發環境。
-        """)
+        # 如果是本地開發且檔案不存在，提供指引
+        if source == "本地 CSV 檔案" and "FileNotFoundError" in error:
+            st.warning(
+                "### 找不到本地測試資料檔案！\n\n"
+                "請確認 `data/TWYA 行動時間線資料_本地測試.csv` 檔案存在於您的專案目錄中。\n\n"
+                "如果檔案已存在但仍無法載入，可能是以下原因：\n\n"
+                "1. **檔案路徑不正確** - 請確認檔案位於 `data/` 資料夾中\n"
+                "2. **檔案編碼問題** - 請確認 CSV 檔案使用 UTF-8 編碼\n"
+                "3. **檔案權限問題** - 請確認應用程式有讀取權限"
+            )
         return
     
     if df is None or df.empty:
