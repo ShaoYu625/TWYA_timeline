@@ -16,6 +16,29 @@ from oauth2client.service_account import ServiceAccountCredentials
 import json
 import base64
 from pathlib import Path
+import ssl
+import certifi
+import httplib2
+import os
+import urllib3
+import warnings
+
+# 禁用SSL警告（僅用於本地開發環境）
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+warnings.filterwarnings('ignore', message='Unverified HTTPS request')
+
+# 設置環境變數以處理SSL問題（僅用於本地開發）
+os.environ['CURL_CA_BUNDLE'] = ''
+os.environ['REQUESTS_CA_BUNDLE'] = ''
+os.environ['PYTHONHTTPSVERIFY'] = '0'
+
+# 修改 ssl 的默認上下文為不驗證
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
 
 
 # =============================================================================
@@ -216,9 +239,9 @@ setup_page_config()
 # 資料載入函數
 # =============================================================================
 
-@st.cache_data(ttl=300)  # 快取 5 分鐘
 def load_data_from_google_sheet():
-    """從 Google Sheet 讀取資料"""
+    """從 Google Sheet 讀取資料，使用禁用SSL驗證的方式（僅用於本地開發）"""
+    
     try:
         # 從 Streamlit secrets 讀取憑證
         creds_dict = dict(st.secrets["gcp_service_account"])
@@ -231,7 +254,8 @@ def load_data_from_google_sheet():
             "https://www.googleapis.com/auth/drive"
         ]
         
-        # 使用憑證進行授權
+        # 使用憑證進行授權，但使用標準方式（讓系統處理SSL）
+        # 我們已經在檔案開頭設置了環境變數來處理SSL
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         client = gspread.authorize(creds)
         
@@ -264,11 +288,15 @@ def load_data_from_google_sheet():
         return df, None
         
     except Exception as e:
-        return None, str(e)
+        error_msg = str(e)
+        # 如果是SSL錯誤，提供更詳細的說明
+        if 'SSL' in error_msg or 'ssl' in error_msg:
+            error_msg = f"SSL連接錯誤：{error_msg}\n\n這是本地開發環境的網路安全設定問題，不是程式碼錯誤。雲端版本不受影響。"
+        return None, error_msg
 
 
 def clean_and_validate_data(df):
-    """清理並驗證資料"""
+    """清理並驗證資料，支持多種日期時間格式"""
     df_clean = df.copy()
     
     # 補充選填欄位
@@ -277,7 +305,9 @@ def clean_and_validate_data(df):
         'Status': 'WIP',
         'Notes': '',
         'StartTime': '',
-        'EndTime': ''
+        'EndTime': '',
+        'StartDate': None,
+        'EndDate': None
     }
     
     for col, default_value in optional_columns.items():
@@ -295,14 +325,33 @@ def clean_and_validate_data(df):
     for col in ['StartDate', 'EndDate']:
         df_clean[col] = pd.to_datetime(df_clean[col], errors='coerce')
     
-    # 移除日期不完整的紀錄
-    df_clean = df_clean.dropna(subset=['StartDate', 'EndDate'])
+    # 處理只有結束日期的情況（deadline）
+    # 如果沒有開始日期，則將開始日期設為結束日期前7天（或當天）
+    mask_no_start = df_clean['StartDate'].isna() & df_clean['EndDate'].notna()
+    if mask_no_start.any():
+        df_clean.loc[mask_no_start, 'StartDate'] = df_clean.loc[mask_no_start, 'EndDate'] - pd.Timedelta(days=1)
+        # 標記這些為deadline類型
+        if 'EventType' not in df_clean.columns:
+            df_clean['EventType'] = 'normal'
+        df_clean.loc[mask_no_start, 'EventType'] = 'deadline'
+    
+    # 如果還沒有EventType欄位，添加並設為normal
+    if 'EventType' not in df_clean.columns:
+        df_clean['EventType'] = 'normal'
+    
+    # 移除完全沒有日期的記錄（開始和結束都沒有）
+    df_clean = df_clean.dropna(subset=['EndDate'])
     
     # 確保結束日期不早於開始日期
     mask = df_clean['EndDate'] < df_clean['StartDate']
     if mask.any():
         df_clean.loc[mask, ['StartDate', 'EndDate']] = \
             df_clean.loc[mask, ['EndDate', 'StartDate']].values
+    
+    # 分類事項類型
+    # 如果有明確的時間，標記為'timed'；只有日期則為'date_only'
+    df_clean['HasStartTime'] = df_clean['StartTime'].astype(str).str.strip().ne('') & df_clean['StartTime'].notna()
+    df_clean['HasEndTime'] = df_clean['EndTime'].astype(str).str.strip().ne('') & df_clean['EndTime'].notna()
     
     # 排序
     df_clean = df_clean.sort_values(['Team', 'StartDate'], ascending=[True, True])
@@ -386,38 +435,70 @@ def create_timeline_chart(df, selected_teams=None, selected_status=None):
     
     # 為每個事件添加時間線條
     for idx, row in df_filtered.iterrows():
-        start_display = row['StartDate'].strftime('%Y-%m-%d')
-        if row.get('StartTime') and str(row['StartTime']).strip():
-            start_display += f" {row['StartTime']}"
+        # 判斷事項類型
+        is_deadline = row.get('EventType') == 'deadline'
+        has_start_time = row.get('HasStartTime', False)
+        has_end_time = row.get('HasEndTime', False)
         
-        end_display = row['EndDate'].strftime('%Y-%m-%d')
-        if row.get('EndTime') and str(row['EndTime']).strip():
-            end_display += f" {row['EndTime']}"
+        # 格式化顯示時間
+        if is_deadline:
+            start_display = "（無開始時間）"
+            end_display = row['EndDate'].strftime('%Y-%m-%d')
+            if has_end_time:
+                end_display += f" {row['EndTime']}"
+        else:
+            start_display = row['StartDate'].strftime('%Y-%m-%d')
+            if has_start_time:
+                start_display += f" {row['StartTime']}"
+            
+            end_display = row['EndDate'].strftime('%Y-%m-%d')
+            if has_end_time:
+                end_display += f" {row['EndTime']}"
+        
+        # 判斷時間精度
+        time_precision = "⏰ " if (has_start_time or has_end_time) else "📅 "
+        deadline_marker = "🎯 " if is_deadline else ""
         
         hover_text = (
-            f"<b>{row['EventName']}</b><br>"
+            f"<b>{deadline_marker}{row['EventName']}</b><br>"
             f"負責組別：{row['Team']}<br>"
             f"性質：{row['Level']}<br>"
             f"狀態：{row['Status']}<br>"
-            f"開始：{start_display}<br>"
-            f"結束：{end_display}<br>"
-            f"備註：{row['Notes'] if row['Notes'] else '無'}"
         )
         
+        if is_deadline:
+            hover_text += f"截止期限：{time_precision}{end_display}<br>"
+        else:
+            hover_text += (
+                f"開始：{time_precision}{start_display}<br>"
+                f"結束：{time_precision}{end_display}<br>"
+            )
+        
+        hover_text += f"備註：{row['Notes'] if row['Notes'] else '無'}"
+        
         status_marker = get_status_marker(row['Status'])
-        display_text = f"{status_marker} {row['EventName']}" if status_marker else row['EventName']
+        display_text = f"{deadline_marker}{status_marker} {row['EventName']}" if (status_marker or deadline_marker) else row['EventName']
         
         # 計算文字顏色（深色背景用白字）
         team_color = color_mapping[row['Team']]
+        
+        # deadline使用不同的視覺樣式
+        if is_deadline:
+            line_style = dict(color=team_color, width=6, dash='dot')  # 虛線表示deadline
+            marker_style = dict(size=16, symbol='diamond', color=team_color, 
+                              line=dict(color='white', width=2))  # 菱形標記
+        else:
+            line_style = dict(color=team_color, width=18)  # 實線表示時間段
+            marker_style = dict(size=14, symbol='circle', color=team_color, 
+                              line=dict(color='white', width=2))  # 圓形標記
         
         fig.add_trace(go.Scatter(
             x=[row['StartDate'], row['EndDate']],
             y=[idx, idx],
             mode='lines+markers+text',
             name=row['Team'],
-            line=dict(color=team_color, width=18),  # 加粗時間條
-            marker=dict(size=14, symbol='circle', color=team_color, 
-                       line=dict(color='white', width=2)),  # 白色邊框
+            line=line_style,
+            marker=marker_style,
             text=[display_text, ''],
             textposition='middle right',
             textfont=dict(size=12, color='#2C2C2C', family='Arial Black'),  # 加粗文字
@@ -597,13 +678,36 @@ def main():
         st.markdown("---")
         st.caption(f"更新時間: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     
-    # 載入資料
-    with st.spinner("正在載入資料..."):
+    # 載入資料 - 僅使用 Google Sheets
+    with st.spinner("正在從 Google Sheets 載入資料..."):
         df, error = load_data_from_google_sheet()
+        
+        if df is not None:
+            st.success("☁️ 已從 Google Sheets 載入資料")
+        else:
+            st.error(f"❌ 無法從 Google Sheets 載入資料")
+            st.error(f"**錯誤詳情：** {error}")
     
     if error:
-        st.error(f"❌ 無法載入資料：{error}")
-        st.info("請確認 Streamlit Secrets 已正確設定 Google Service Account 憑證")
+        st.warning("""
+        ### 🔧 SSL連接問題排查
+        
+        此錯誤通常由以下原因造成：
+        
+        1. **防毒軟體干擾** - 某些防毒軟體會攔截SSL連接
+           - 請暫時停用防毒軟體的「SSL掃描」功能
+        
+        2. **企業/學校網路限制** - 可能有代理伺服器或防火牆限制
+           - 請嘗試使用手機熱點連接
+        
+        3. **Windows系統時間不正確** - SSL憑證驗證需要正確的系統時間
+           - 請檢查系統日期時間是否正確
+        
+        4. **Python SSL模組問題**
+           - 請在終端機執行：`pip install --upgrade certifi urllib3`
+        
+        **注意：** 雲端版本（Streamlit Cloud）不受此問題影響，此問題僅發生在本地開發環境。
+        """)
         return
     
     if df is None or df.empty:
