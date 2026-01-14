@@ -151,8 +151,82 @@ def setup_page_config():
             color: white;
         }
         
-        /* 擴展區塊樣式 */
-        .streamlit-expanderHeader {
+        /* ============================================
+           側邊欄 Expander 樣式優化 - 高對比度設計
+           ============================================ */
+        
+        /* 側邊欄所有 expander 標題 - 白色卡片 */
+        [data-testid="stSidebar"] details summary,
+        [data-testid="stSidebar"] .streamlit-expanderHeader,
+        section[data-testid="stSidebar"] details summary {
+            background-color: #FFFFFF !important;
+            color: #175BA6 !important;
+            font-weight: 700 !important;
+            font-size: 1.05rem !important;
+            border-left: 5px solid #E9E13B !important;
+            border-radius: 8px !important;
+            padding: 1rem 1.25rem !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+            margin: 0.5rem 0 !important;
+        }
+        
+        /* 懸停效果 */
+        [data-testid="stSidebar"] details summary:hover,
+        [data-testid="stSidebar"] .streamlit-expanderHeader:hover {
+            background-color: #F8F9FA !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+            transform: translateY(-1px);
+            transition: all 0.2s ease;
+        }
+        
+        /* 側邊欄 expander 內容區塊 */
+        [data-testid="stSidebar"] details,
+        [data-testid="stSidebar"] .streamlit-expanderContent,
+        section[data-testid="stSidebar"] details > div {
+            background-color: #FFFFFF !important;
+            border-radius: 0 0 8px 8px !important;
+            margin-top: -8px !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        /* 側邊欄內容區所有文字 */
+        [data-testid="stSidebar"] details > div,
+        [data-testid="stSidebar"] .streamlit-expanderContent,
+        section[data-testid="stSidebar"] details p,
+        section[data-testid="stSidebar"] details div,
+        section[data-testid="stSidebar"] details li,
+        section[data-testid="stSidebar"] details h1,
+        section[data-testid="stSidebar"] details h2,
+        section[data-testid="stSidebar"] details h3,
+        section[data-testid="stSidebar"] details h4 {
+            background-color: #FFFFFF !important;
+            color: #2C2C2C !important;
+            padding: 1.25rem !important;
+        }
+        
+        /* 側邊欄標題文字 */
+        section[data-testid="stSidebar"] details h4 {
+            color: #175BA6 !important;
+            font-weight: 700 !important;
+            margin-top: 1rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        /* 側邊欄粗體文字 */
+        section[data-testid="stSidebar"] details strong,
+        section[data-testid="stSidebar"] details b {
+            color: #175BA6 !important;
+            font-weight: 700 !important;
+        }
+        
+        /* 側邊欄分隔線 */
+        section[data-testid="stSidebar"] details hr {
+            border-color: rgba(23, 91, 166, 0.2) !important;
+            margin: 1rem 0 !important;
+        }
+        
+        /* 主內容區的 expander 保持原樣 */
+        .main .streamlit-expanderHeader {
             background-color: rgba(233, 225, 59, 0.15);
             color: #2C2C2C;
             font-weight: bold;
@@ -160,7 +234,7 @@ def setup_page_config():
             border-radius: 4px;
         }
         
-        .streamlit-expanderHeader:hover {
+        .main .streamlit-expanderHeader:hover {
             background-color: rgba(233, 225, 59, 0.25);
         }
         
@@ -248,6 +322,21 @@ def load_data():
                 }
                 rename_dict = {k: v for k, v in column_mapping.items() if k in df.columns}
                 df = df.rename(columns=rename_dict)
+                
+                # 映射中文狀態到英文
+                status_mapping = {
+                    '未開始': 'ToDo',
+                    '進行中': 'WIP',
+                    '已完成': 'Done',
+                    '完成': 'Done',
+                    '阻塞': 'Blocked',
+                    '暫停': 'Pending'
+                }
+                if 'Status' in df.columns:
+                    df['Status'] = df['Status'].map(lambda x: status_mapping.get(x, x) if pd.notna(x) else x)
+                
+                # 保留原始的性質名稱（籌備、執行）
+                # 不做任何映射，直接使用CSV中的值
 
                 return df, None, "本地 CSV 檔案"
         except Exception as e:
@@ -279,6 +368,21 @@ def load_data():
                 rename_dict = {k: v for k, v in column_mapping.items() if k in df.columns}
                 df = df.rename(columns=rename_dict)
                 
+                # 映射中文狀態到英文
+                status_mapping = {
+                    '未開始': 'ToDo',
+                    '進行中': 'WIP',
+                    '已完成': 'Done',
+                    '完成': 'Done',
+                    '阻塞': 'Blocked',
+                    '暫停': 'Pending'
+                }
+                if 'Status' in df.columns:
+                    df['Status'] = df['Status'].map(lambda x: status_mapping.get(x, x) if pd.notna(x) else x)
+                
+                # 保留原始的性質名稱（籌備、執行）
+                # 不做任何映射，直接使用CSV中的值
+                
                 return df, None, "Google Sheets"
         except Exception as e:
             error_msg = f"從 Google Sheets 載入資料時發生錯誤: {e}"
@@ -292,8 +396,8 @@ def clean_and_validate_data(df):
     
     # 補充選填欄位
     optional_columns = {
-        'Level': 'B-專案執行',
-        'Status': 'WIP',
+        'Level': '執行',
+        'Status': 'ToDo',
         'Notes': '',
         'StartTime': '',
         'EndTime': '',
@@ -306,8 +410,8 @@ def clean_and_validate_data(df):
             df_clean[col] = default_value
     
     # 填補空值
-    df_clean['Level'] = df_clean['Level'].fillna('B-專案執行')
-    df_clean['Status'] = df_clean['Status'].fillna('WIP')
+    df_clean['Level'] = df_clean['Level'].fillna('執行')
+    df_clean['Status'] = df_clean['Status'].fillna('ToDo')
     df_clean['Notes'] = df_clean['Notes'].fillna('')
     df_clean['StartTime'] = df_clean['StartTime'].fillna('')
     df_clean['EndTime'] = df_clean['EndTime'].fillna('')
@@ -394,19 +498,35 @@ def get_team_color_mapping(teams):
     return color_mapping
 
 
+def get_luminance(hex_color):
+    """計算顏色的亮度（0-1之間，越接近1越亮）"""
+    # 移除 # 符號
+    hex_color = hex_color.lstrip('#')
+    # 轉換為 RGB
+    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+    # 計算相對亮度（使用 ITU-R BT.709 標準）
+    luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+    return luminance
+
+
+def is_dark_color(hex_color):
+    """判斷顏色是否為深色（亮度小於0.5視為深色）"""
+    return get_luminance(hex_color) < 0.5
+
+
 def get_status_marker(status):
     """根據狀態返回標記符號"""
     status_markers = {
         'Done': '✓',
         'WIP': '⟳',
-        'Todo': '○',
+        'ToDo': '○',
         'Blocked': '⊗',
         'Pending': '⏸'
     }
     return status_markers.get(status, '')
 
 
-def create_timeline_chart(df, selected_teams=None, selected_status=None):
+def create_timeline_chart(df, selected_teams=None, selected_status=None, selected_levels=None):
     """生成互動式時間線圖表"""
     # 篩選資料
     df_filtered = df.copy()
@@ -414,6 +534,8 @@ def create_timeline_chart(df, selected_teams=None, selected_status=None):
         df_filtered = df_filtered[df_filtered['Team'].isin(selected_teams)]
     if selected_status:
         df_filtered = df_filtered[df_filtered['Status'].isin(selected_status)]
+    if selected_levels:
+        df_filtered = df_filtered[df_filtered['Level'].isin(selected_levels)]
     
     if df_filtered.empty:
         return None
@@ -470,8 +592,18 @@ def create_timeline_chart(df, selected_teams=None, selected_status=None):
         status_marker = get_status_marker(row['Status'])
         display_text = f"{deadline_marker}{status_marker} {row['EventName']}" if (status_marker or deadline_marker) else row['EventName']
         
-        # 計算文字顏色（深色背景用白字）
+        # 獲取團隊顏色
         team_color = color_mapping[row['Team']]
+        
+        # 計算時間跨度（天數）
+        time_span_days = (row['EndDate'] - row['StartDate']).days
+        
+        # 判斷文字顏色（根據底色明暗度和時間跨度）
+        # 如果時間跨度較長且底色是深色，使用白色文字以提高可讀性
+        if time_span_days >= 30 and not is_deadline and is_dark_color(team_color):
+            text_color = '#FFFFFF'  # 深色背景用白色文字
+        else:
+            text_color = '#2C2C2C'  # 其他情況使用黑色文字
         
         # deadline使用不同的視覺樣式
         if is_deadline:
@@ -491,8 +623,8 @@ def create_timeline_chart(df, selected_teams=None, selected_status=None):
             line=line_style,
             marker=marker_style,
             text=[display_text, ''],
-            textposition='middle right',
-            textfont=dict(size=12, color='#2C2C2C', family='Arial Black'),  # 加粗文字
+            textposition='middle right',  # 統一使用右側位置，保持文字位置一致
+            textfont=dict(size=12, color=text_color, family='Arial Black'),  # 根據背景動態調整文字顏色
             hovertemplate=hover_text + '<extra></extra>',
             showlegend=False
         ))
@@ -654,13 +786,66 @@ def main():
     
     # 側邊欄（簡化內容，默認收起）
     with st.sidebar:
-        st.markdown("### 📖 使用說明")
         st.markdown("""
-        - 資料每 5 分鐘自動更新
-        - 使用篩選器查看特定團隊或狀態
-        - 懸停在時間線上查看詳細資訊
-        - 使用滑鼠滾輪縮放時間軸
-        """)
+        <div style='
+            background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border-left: 5px solid #E9E13B;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        '>
+            <h3 style='color: #175BA6; margin: 0 0 1rem 0; font-weight: 700; display: flex; align-items: center;'>
+                📖 使用說明
+            </h3>
+            
+            <div style='background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);'>
+                <h4 style='color: #175BA6; margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;'>🎯 基本功能</h4>
+                <p style='color: #2C2C2C; margin: 0.25rem 0; font-size: 0.85rem; line-height: 1.5;'>
+                    <strong style='color: #175BA6;'>📊 查看時間線</strong><br>
+                    圖表自動顯示所有行動任務，不同團隊使用不同顏色區分
+                </p>
+                <p style='color: #2C2C2C; margin: 0.5rem 0 0 0; font-size: 0.85rem; line-height: 1.5;'>
+                    <strong style='color: #175BA6;'>🔍 篩選功能</strong><br>
+                    支援團隊、狀態、性質多重篩選，留空顯示全部資料
+                </p>
+            </div>
+            
+            <div style='background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);'>
+                <h4 style='color: #175BA6; margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;'>🖱️ 互動操作</h4>
+                <p style='color: #2C2C2C; margin: 0.25rem 0; font-size: 0.85rem; line-height: 1.5;'>
+                    📍 滑鼠移到任務條上查看詳情<br>
+                    🔎 滾輪縮放、拖曳移動、雙擊重置<br>
+                    📥 點擊📷圖示下載截圖
+                </p>
+            </div>
+            
+            <div style='background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);'>
+                <h4 style='color: #175BA6; margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;'>🎨 圖例說明</h4>
+                <p style='color: #2C2C2C; margin: 0.25rem 0; font-size: 0.85rem; line-height: 1.5;'>
+                    <strong>狀態：</strong> ⭕ToDo | 🔄WIP | ✅Done<br>
+                    <strong>性質：</strong> 🛠️籌備 | 🚀執行
+                </p>
+            </div>
+            
+            <div style='background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);'>
+                <h4 style='color: #175BA6; margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;'>🔄 資料更新</h4>
+                <p style='color: #2C2C2C; margin: 0.25rem 0; font-size: 0.85rem; line-height: 1.5;'>
+                    ☁️ 每5分鐘自動同步<br>
+                    🔃 手動點擊右上角按鈕
+                </p>
+            </div>
+            
+            <div style='background: #FFF9E6; padding: 1rem; border-radius: 8px; border-left: 3px solid #E9E13B; box-shadow: 0 2px 4px rgba(0,0,0,0.05);'>
+                <h4 style='color: #175BA6; margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;'>💡 小技巧</h4>
+                <p style='color: #2C2C2C; margin: 0.25rem 0; font-size: 0.85rem; line-height: 1.5;'>
+                    • 統計資訊即時更新<br>
+                    • 支援多選交叉比對<br>
+                    • 先篩選後縮放查看細節
+                </p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     
     df, error, source = load_data()
     
@@ -705,20 +890,21 @@ def main():
         st.metric("👥 團隊數", df_clean['Team'].nunique())
     with stat_col3:
         done_count = len(df_clean[df_clean['Status'] == 'Done'])
-        st.metric("✓ 已完成", done_count)
+        st.metric("✓ Done", done_count)
     with stat_col4:
         wip_count = len(df_clean[df_clean['Status'] == 'WIP'])
-        st.metric("⟳ 進行中", wip_count)
+        st.metric("⟳ WIP", wip_count)
     with stat_col5:
-        todo_count = len(df_clean[df_clean['Status'] == 'Todo'])
-        st.metric("○ 待執行", todo_count)
+        todo_count = len(df_clean[df_clean['Status'] == 'ToDo'])
+        st.metric("○ ToDo", todo_count)
     
     st.markdown("<div style='margin:8px 0;'></div>", unsafe_allow_html=True)
     
     # 篩選器區（單獨一行）
-    filter_col1, filter_col2, filter_col3 = st.columns([2, 2, 1])
+    filter_col1, filter_col2, filter_col3 = st.columns([3, 3, 3])
     all_teams = sorted(df_clean['Team'].unique())
     all_status = sorted(df_clean['Status'].unique())
+    all_levels = sorted(df_clean['Level'].unique())
     with filter_col1:
         selected_teams = st.multiselect(
             "🔍 選擇團隊",
@@ -734,17 +920,18 @@ def main():
             help="可選擇多個狀態"
         )
     with filter_col3:
-        st.markdown("<div style='margin-top:23px;'></div>", unsafe_allow_html=True)
-        show_help = st.checkbox("💡 顯示提示", value=False)
-    
-    if show_help:
-        st.info("💡 **使用技巧**: 使用滑鼠滾輪縮放時間軸 | 點擊並拖動可以平移 | 使用上方按鈕快速選擇時間範圍")
+        selected_levels = st.multiselect(
+            "🎯 選擇性質",
+            options=all_levels,
+            default=all_levels,
+            help="可選擇多個性質"
+        )
     
     st.markdown("<hr style='margin:10px 0;border:none;border-top:1px solid #E0E0E0;'>", unsafe_allow_html=True)
     
     # 生成並顯示圖表
     with st.spinner("正在生成時間線..."):
-        fig = create_timeline_chart(df_clean, selected_teams, selected_status)
+        fig = create_timeline_chart(df_clean, selected_teams, selected_status, selected_levels)
     
     if fig is None:
         st.warning("⚠️ 沒有符合篩選條件的資料")
@@ -773,10 +960,45 @@ def main():
             display_df = display_df[display_df['Team'].isin(selected_teams)]
         if selected_status:
             display_df = display_df[display_df['Status'].isin(selected_status)]
+        if selected_levels:
+            display_df = display_df[display_df['Level'].isin(selected_levels)]
+        
+        # 建立反向映射，將英文欄位名稱轉回中文
+        display_columns = {
+            'Team': '負責組別',
+            'EventName': '任務名稱',
+            'Level': '性質',
+            'StartDate': '開始日期',
+            'StartTime': '開始時間',
+            'EndDate': '結束日期',
+            'EndTime': '結束時間',
+            'Status': '狀態',
+            'Notes': '備註'
+        }
+        
+        # 反向映射狀態值為中文
+        status_reverse_mapping = {
+            'ToDo': 'ToDo',
+            'WIP': 'WIP',
+            'Done': 'Done',
+            'Blocked': 'Blocked',
+            'Pending': 'Pending'
+        }
+        
+        # 準備顯示用的資料框
+        show_df = display_df[['Team', 'EventName', 'Level', 'StartDate', 'StartTime', 'EndDate', 'EndTime', 'Status', 'Notes']].copy()
+        
+        # 將日期格式化為易讀格式
+        show_df['StartDate'] = show_df['StartDate'].dt.strftime('%Y/%m/%d').fillna('')
+        show_df['EndDate'] = show_df['EndDate'].dt.strftime('%Y/%m/%d').fillna('')
+        
+        # 將欄位名稱改為中文
+        show_df = show_df.rename(columns=display_columns)
         
         st.dataframe(
-            display_df[['Team', 'EventName', 'Level', 'Status', 'StartDate', 'EndDate', 'Notes']],
-            width="stretch"
+            show_df,
+            width="stretch",
+            hide_index=True
         )
 
 
