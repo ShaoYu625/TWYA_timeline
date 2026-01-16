@@ -205,14 +205,67 @@ def setup_page_config():
             margin: 1.5rem 0;
         }
         
-        /* 多選框樣式 */
-        .stMultiSelect [data-baseweb="tag"] {
-            background-color: #175BA6;
-            color: white;
+        /* ============================================
+           多選框樣式 - 使用品牌配色
+           ============================================ */
+        
+        /* 多選框容器背景 - 白色 */
+        .stMultiSelect > div[data-baseweb="select"] > div {
+            background-color: #FFFFFF !important;
+            border: 2px solid #E0E0E0 !important;
+            border-radius: 8px !important;
         }
         
+        /* 多選框容器聚焦時 */
+        .stMultiSelect > div[data-baseweb="select"] > div:focus-within {
+            border-color: #175BA6 !important;
+            box-shadow: 0 0 0 2px rgba(23, 91, 166, 0.1) !important;
+        }
+        
+        /* 已選擇的標籤 - 使用品牌藍色 */
+        .stMultiSelect [data-baseweb="tag"] {
+            background-color: #175BA6 !important;
+            color: white !important;
+            border-radius: 6px !important;
+            padding: 4px 12px !important;
+            margin: 2px !important;
+            font-weight: 500 !important;
+        }
+        
+        /* 標籤關閉按鈕 */
         .stMultiSelect [data-baseweb="tag"] span[role="button"] {
-            color: white;
+            color: white !important;
+            opacity: 0.8 !important;
+        }
+        
+        .stMultiSelect [data-baseweb="tag"] span[role="button"]:hover {
+            opacity: 1 !important;
+        }
+        
+        /* 下拉選單 */
+        .stMultiSelect [role="listbox"] {
+            background-color: #FFFFFF !important;
+            border: 1px solid #E0E0E0 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        /* 下拉選項 */
+        .stMultiSelect [role="option"] {
+            color: #2C2C2C !important;
+            padding: 8px 12px !important;
+        }
+        
+        /* 下拉選項懸停 */
+        .stMultiSelect [role="option"]:hover {
+            background-color: rgba(23, 91, 166, 0.1) !important;
+        }
+        
+        /* 下拉選項已選擇 */
+        .stMultiSelect [aria-selected="true"] {
+            background-color: rgba(23, 91, 166, 0.15) !important;
+            color: #175BA6 !important;
+            font-weight: 600 !important;
         }
         
         /* ============================================
@@ -346,6 +399,117 @@ def setup_page_config():
         
         [data-testid="stMetricValue"] {
             font-size: 1.5rem !important;
+        }
+        
+        /* ============================================
+           資料表格（DataFrame）樣式 - 品牌配色
+           ============================================ */
+        
+        /* 表格容器 */
+        [data-testid="stDataFrame"],
+        .dataframe-container {
+            background-color: #FFFFFF !important;
+            border-radius: 8px !important;
+            overflow: hidden !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        /* 表格主體 */
+        .dataframe {
+            background-color: #FFFFFF !important;
+            color: #2C2C2C !important;
+            font-size: 0.9rem !important;
+        }
+        
+        /* 表頭樣式 - 使用品牌藍色 */
+        .dataframe thead tr th {
+            background-color: #175BA6 !important;
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
+            padding: 12px 8px !important;
+            text-align: left !important;
+            border-bottom: 2px solid #124785 !important;
+        }
+        
+        /* 表格行 */
+        .dataframe tbody tr {
+            background-color: #FFFFFF !important;
+            border-bottom: 1px solid #E0E0E0 !important;
+            transition: background-color 0.2s ease !important;
+        }
+        
+        /* 表格行懸停效果 */
+        .dataframe tbody tr:hover {
+            background-color: rgba(23, 91, 166, 0.05) !important;
+        }
+        
+        /* 表格斑馬紋效果 */
+        .dataframe tbody tr:nth-child(even) {
+            background-color: #F8F9FA !important;
+        }
+        
+        .dataframe tbody tr:nth-child(even):hover {
+            background-color: rgba(23, 91, 166, 0.08) !important;
+        }
+        
+        /* 表格單元格 */
+        .dataframe tbody td {
+            color: #2C2C2C !important;
+            padding: 10px 8px !important;
+            border: none !important;
+        }
+        
+        /* Streamlit 原生表格樣式 */
+        [data-testid="stTable"] {
+            background-color: #FFFFFF !important;
+        }
+        
+        [data-testid="stTable"] table {
+            background-color: #FFFFFF !important;
+            color: #2C2C2C !important;
+        }
+        
+        [data-testid="stTable"] thead {
+            background-color: #175BA6 !important;
+        }
+        
+        [data-testid="stTable"] th {
+            background-color: #175BA6 !important;
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
+            padding: 12px 8px !important;
+            border-bottom: 2px solid #124785 !important;
+        }
+        
+        [data-testid="stTable"] td {
+            background-color: #FFFFFF !important;
+            color: #2C2C2C !important;
+            padding: 10px 8px !important;
+            border-bottom: 1px solid #E0E0E0 !important;
+        }
+        
+        [data-testid="stTable"] tr:hover td {
+            background-color: rgba(23, 91, 166, 0.05) !important;
+        }
+        
+        /* Expander 內的表格 */
+        .streamlit-expanderContent table {
+            background-color: #FFFFFF !important;
+            color: #2C2C2C !important;
+        }
+        
+        .streamlit-expanderContent thead {
+            background-color: #175BA6 !important;
+        }
+        
+        .streamlit-expanderContent th {
+            background-color: #175BA6 !important;
+            color: #FFFFFF !important;
+        }
+        
+        .streamlit-expanderContent td {
+            background-color: #FFFFFF !important;
+            color: #2C2C2C !important;
         }
     </style>
     """
