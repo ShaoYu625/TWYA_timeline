@@ -608,8 +608,8 @@ def create_timeline_chart(df, selected_teams=None, selected_status=None, selecte
         # deadline使用不同的視覺樣式
         if is_deadline:
             line_style = dict(color=team_color, width=6, dash='dot')  # 虛線表示deadline
-            marker_style = dict(size=16, symbol='diamond', color=team_color, 
-                              line=dict(color='white', width=2))  # 菱形標記
+            marker_style = dict(size=16, symbol='circle', color=team_color, 
+                              line=dict(color='white', width=2))  # 圓形標記
         else:
             line_style = dict(color=team_color, width=18)  # 實線表示時間段
             marker_style = dict(size=14, symbol='circle', color=team_color, 
