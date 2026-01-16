@@ -37,8 +37,26 @@ def setup_page_config():
         page_title="TWYA 行動時間線",
         page_icon="./logo/logo.png",
         layout="wide",
-        initial_sidebar_state="collapsed"  # 默認收起側邊欄，給時間線更多空間
+        initial_sidebar_state="collapsed",  # 默認收起側邊欄，給時間線更多空間
+        menu_items={
+            'Get Help': None,
+            'Report a bug': None,
+            'About': "臺灣華德福青年運動聯盟行動時間線系統"
+        }
     )
+    
+    # 強制注入主題配置 meta tag - 確保在任何環境下都使用淺色主題
+    theme_override = """
+    <meta name="theme-color" content="#FFFFFF">
+    <meta name="color-scheme" content="light only">
+    <style>
+        /* 最高優先級：強制整個頁面使用淺色主題 */
+        :root {
+            color-scheme: light only !important;
+        }
+    </style>
+    """
+    st.markdown(theme_override, unsafe_allow_html=True)
     
     # 嘗試讀取 logo 並轉為 base64 作為 favicon
     try:
@@ -64,33 +82,60 @@ def setup_page_config():
         /* 主要配色:品牌藍 #175BA6、品牌黃 #E9E13B */
         /* 強制使用淺色主題,覆蓋所有暗色設定 */
         
-        /* 全域強制淺色主題 - 覆蓋 Streamlit 預設的深色模式 */
+        /* 最高優先級全域強制淺色主題 - 覆蓋所有可能的深色模式 */
         :root {
-            color-scheme: light !important;
+            color-scheme: light only !important;
+            --background-color: #FFFFFF !important;
+            --text-color: #000000 !important;
         }
         
-        /* 強制所有背景為白色 */
-        html, body, [data-testid="stAppViewContainer"],
+        /* 覆蓋可能的深色模式媒體查詢 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                color-scheme: light only !important;
+            }
+        }
+        
+        /* 強制所有可能的背景元素為白色 - 最廣泛的選擇器 */
+        html, body, #root,
+        [data-testid="stAppViewContainer"],
+        [data-testid="stApp"],
         .stApp, .main, .block-container,
         [data-testid="stAppViewContainer"] > section,
-        section.main > div {
+        [data-testid="stDecoration"],
+        [data-testid="stToolbar"],
+        [data-testid="stHeader"],
+        section.main,
+        section.main > div,
+        div[data-testid="stVerticalBlock"],
+        div[role="main"] {
             background-color: #FFFFFF !important;
+            background: #FFFFFF !important;
             color: #000000 !important;
         }
         
-        /* 確保所有文字在白色背景上可讀 */
-        p, span, div, label, h1, h2, h3, h4, h5, h6 {
+        /* 確保所有文字元素在白色背景上可讀 */
+        p, span, div, label, h1, h2, h3, h4, h5, h6,
+        [data-testid="stMarkdownContainer"],
+        .stMarkdown {
             color: #2C2C2C !important;
+        }
+        
+        /* 強制 Streamlit 特定容器 */
+        [data-testid="stAppViewContainer"] {
+            background-color: #FFFFFF !important;
         }
         
         /* 特別強制主應用區域 */
         .stApp {
             background-color: #FFFFFF !important;
+            background: #FFFFFF !important;
         }
         
         /* 強制主內容區背景為白色 */
         .main .block-container {
             background-color: #FFFFFF !important;
+            background: #FFFFFF !important;
         }
         
         /* 側邊欄樣式 */
