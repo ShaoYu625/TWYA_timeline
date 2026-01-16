@@ -79,54 +79,91 @@ def setup_page_config():
     # 自定義 CSS 樣式(使用聯盟 logo 配色)
     custom_css = """
     <style>
-        /* 主要配色:品牌藍 #175BA6、品牌黃 #E9E13B */
-        /* 強制使用淺色主題,覆蓋所有暗色設定 */
+        /* ============================================
+           全域強制淺色主題 - 最高優先級
+           完全覆蓋瀏覽器深色模式
+           ============================================ */
         
-        /* 最高優先級全域強制淺色主題 - 覆蓋所有可能的深色模式 */
+        /* 最高優先級：完全禁用深色模式 */
+        * {
+            color-scheme: light only !important;
+        }
+        
         :root {
             color-scheme: light only !important;
             --background-color: #FFFFFF !important;
             --text-color: #000000 !important;
+            --primary-color: #175BA6 !important;
+            --secondary-color: #E9E13B !important;
         }
         
-        /* 覆蓋可能的深色模式媒體查詢 */
+        /* 強制覆蓋瀏覽器深色模式偏好 */
         @media (prefers-color-scheme: dark) {
+            * {
+                color-scheme: light only !important;
+            }
+            
             :root {
                 color-scheme: light only !important;
+            }
+            
+            html, body {
+                background-color: #FFFFFF !important;
+                background: #FFFFFF !important;
+                color: #000000 !important;
             }
         }
         
         /* 強制所有可能的背景元素為白色 - 最廣泛的選擇器 */
-        html, body, #root,
+        html, body, #root, #__next,
         [data-testid="stAppViewContainer"],
         [data-testid="stApp"],
+        [class*="stApp"],
         .stApp, .main, .block-container,
         [data-testid="stAppViewContainer"] > section,
         [data-testid="stDecoration"],
         [data-testid="stToolbar"],
         [data-testid="stHeader"],
+        [data-testid="stBottom"],
         section.main,
         section.main > div,
         div[data-testid="stVerticalBlock"],
-        div[role="main"] {
-            background-color: #FFFFFF !important;
-            background: #FFFFFF !important;
-            color: #000000 !important;
-        }
-        
-        /* 確保所有文字元素在白色背景上可讀 */
-        p, span, div, label, h1, h2, h3, h4, h5, h6,
+        div[data-testid="stHorizontalBlock"],
+        div[role="main"],
+        .element-container,
+        [data-testid="column"],
         [data-testid="stMarkdownContainer"],
         .stMarkdown {
+            background-color: #FFFFFF !important;
+            background: #FFFFFF !important;
             color: #2C2C2C !important;
+            forced-color-adjust: none !important;
         }
         
-        /* 強制 Streamlit 特定容器 */
+        /* 強制所有文字元素使用深色文字 */
+        p, span, div, label, h1, h2, h3, h4, h5, h6,
+        a, li, td, th, input, textarea, select,
+        [data-testid="stMarkdownContainer"],
+        [data-testid="stText"],
+        .stMarkdown,
+        .stMarkdown p,
+        .stMarkdown span {
+            color: #2C2C2C !important;
+            forced-color-adjust: none !important;
+        }
+        
+        /* 特別強制 Streamlit 特定容器 */
         [data-testid="stAppViewContainer"] {
             background-color: #FFFFFF !important;
+            background: #FFFFFF !important;
         }
         
-        /* 特別強制主應用區域 */
+        [data-testid="stApp"] {
+            background-color: #FFFFFF !important;
+            background: #FFFFFF !important;
+        }
+        
+        /* 強制主應用區域 */
         .stApp {
             background-color: #FFFFFF !important;
             background: #FFFFFF !important;
@@ -137,6 +174,14 @@ def setup_page_config():
             background-color: #FFFFFF !important;
             background: #FFFFFF !important;
         }
+        
+        /* 強制主內容區 */
+        .main {
+            background-color: #FFFFFF !important;
+            background: #FFFFFF !important;
+        }
+        
+        /* 主要配色:品牌藍 #175BA6、品牌黃 #E9E13B */
         
         /* 側邊欄樣式 */
         [data-testid="stSidebar"] {
@@ -206,12 +251,48 @@ def setup_page_config():
         }
         
         /* ============================================
+           強制所有輸入元素使用白色背景
+           ============================================ */
+        
+        /* 所有輸入框、文本框、選擇框 */
+        input, textarea, select,
+        [data-baseweb="input"],
+        [data-baseweb="textarea"],
+        [data-baseweb="select"],
+        .stTextInput input,
+        .stTextArea textarea,
+        .stSelectbox select,
+        [data-testid="stNumberInput"] input,
+        [data-testid="stDateInput"] input,
+        [data-testid="stTimeInput"] input {
+            background-color: #FFFFFF !important;
+            background: #FFFFFF !important;
+            color: #2C2C2C !important;
+            border-color: #E0E0E0 !important;
+            forced-color-adjust: none !important;
+        }
+        
+        /* 輸入框聚焦狀態 */
+        input:focus, textarea:focus, select:focus {
+            background-color: #FFFFFF !important;
+            border-color: #175BA6 !important;
+            color: #2C2C2C !important;
+        }
+        
+        /* 下拉選單選項 */
+        option {
+            background-color: #FFFFFF !important;
+            color: #2C2C2C !important;
+        }
+        
+        /* ============================================
            多選框樣式 - 使用品牌配色
            ============================================ */
         
-        /* 多選框容器背景 - 白色 */
+        /* 多選框容器背景 - 強制白色 */
         .stMultiSelect > div[data-baseweb="select"] > div {
             background-color: #FFFFFF !important;
+            background: #FFFFFF !important;
             border: 2px solid #E0E0E0 !important;
             border-radius: 8px !important;
         }
