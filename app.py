@@ -64,7 +64,26 @@ def setup_page_config():
         /* 主要配色:品牌藍 #175BA6、品牌黃 #E9E13B */
         /* 強制使用淺色主題,覆蓋所有暗色設定 */
         
-        /* 強制設定整體背景為白色 */
+        /* 全域強制淺色主題 - 覆蓋 Streamlit 預設的深色模式 */
+        :root {
+            color-scheme: light !important;
+        }
+        
+        /* 強制所有背景為白色 */
+        html, body, [data-testid="stAppViewContainer"],
+        .stApp, .main, .block-container,
+        [data-testid="stAppViewContainer"] > section,
+        section.main > div {
+            background-color: #FFFFFF !important;
+            color: #000000 !important;
+        }
+        
+        /* 確保所有文字在白色背景上可讀 */
+        p, span, div, label, h1, h2, h3, h4, h5, h6 {
+            color: #2C2C2C !important;
+        }
+        
+        /* 特別強制主應用區域 */
         .stApp {
             background-color: #FFFFFF !important;
         }
